@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Loadstring Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+  <style>
+    :root[data-theme="dark"] {
+      --bg: #000000;
+      --bg2: #0d0d0d;
+      --bg3: #161616;
+      --border: #2a2a2a;
+      --accent: #ffffff;
+      --accent2: #cccccc;
+      --text: #e2e8f0;
+      --text-muted: #555555;
+      --glow: 0 0 20px rgba(255,255,255,0.08);
+      --glow2: 0 0 40px rgba(255,255,255,0.04);
+      --input-bg: #080808;
+      --btn-bg: #ffffff;
+      --btn-text: #000000;
+      --btn-border: #ffffff;
+      --output-bg: #080808;
+      --toggle-bg: #161616;
+    }
+    :root[data-theme="light"] {
+      --bg: #f5f5f5;
+      --bg2: #ffffff;
+      --bg3: #eeeeee;
+      --border: #cccccc;
+      --accent: #000000;
+      --accent2: #333333;
+      --text: #111111;
+      --text-muted: #888888;
+      --glow: 0 4px 24px rgba(0,0,0,0.10);
+      --glow2: 0 2px 12px rgba(0,0,0,0.05);
+      --input-bg: #ffffff;
+      --btn-bg: #000000;
+      --btn-text: #ffffff;
+      --btn-border: #000000;
+      --output-bg: #f0f0f0;
+      --toggle-bg: #e0e0e0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      transition: background 0.4s, color 0.4s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.25;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Ambient glow orb */
+    body::after {
+      content: '';
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,240,255,0.07) 0%, transparent 70%);
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 0;
+      transition: background 0.4s;
+    }
+
+    [data-theme="light"] body::after {
+      background: radial-gradient(circle, rgba(91,79,207,0.08) 0%, transparent 70%);
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: var(--glow), var(--glow2), 0 2px 60px rgba(0,0,0,0.4);
+      transition: background 0.4s, border-color 0.4s, box-shadow 0.4s;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .logo {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .logo-title {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 1.15rem;
+      color: var(--text);
+      letter-spacing: 0.08em;
+      transition: color 0.4s;
+    }
+
+    .logo-sub {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* Theme toggle */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toggle-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      cursor: pointer;
+    }
+
+    .toggle input { display: none; }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--toggle-bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      transition: left 0.3s, background 0.3s, box-shadow 0.3s;
+    }
+
+    .toggle input:checked ~ .toggle-thumb {
+      left: 23px;
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin-bottom: 28px;
+    }
+
+    /* Label */
+    label {
+      display: block;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* Input group */
+    .input-group {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .input-group:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0,240,255,0.12), var(--glow);
+    }
+
+    [data-theme="light"] .input-group:focus-within {
+      box-shadow: 0 0 0 2px rgba(91,79,207,0.15);
+    }
+
+    .input-prefix {
+      background: var(--bg3);
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+      transition: background 0.4s, border-color 0.4s;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--input-bg);
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      padding: 13px 14px;
+      transition: background 0.4s, color 0.4s;
+    }
+
+    input[type="text"]::placeholder {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    /* Generate button */
+    .btn-generate {
+      width: 100%;
+      padding: 13px;
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border: 2px solid var(--btn-border);
+      border-radius: 10px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.3s;
+      margin-bottom: 24px;
+    }
+
+    .btn-generate:hover { opacity: 0.85; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .btn-generate:active { transform: translateY(0); opacity: 1; }
+
+    /* Output section */
+    .output-section {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.4s, transform 0.4s;
+      pointer-events: none;
+    }
+
+    .output-section.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    .output-box {
+      background: var(--output-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+      position: relative;
+      transition: background 0.4s, border-color 0.4s;
+    }
+
+    .output-box::before {
+      content: '> OUTPUT';
+      position: absolute;
+      top: -8px;
+      left: 12px;
+      background: var(--bg2);
+      padding: 0 6px;
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      letter-spacing: 0.15em;
+      transition: background 0.4s, color 0.4s;
+    }
+
+    #output-text {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--accent2);
+      word-break: break-all;
+      line-height: 1.6;
+      transition: color 0.4s;
+      min-height: 1.5em;
+    }
+
+    /* Copy button */
+    .btn-copy {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      color: var(--accent);
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-copy:hover {
+      background: var(--accent);
+      color: var(--bg2);
+      transform: translateY(-1px);
+    }
+
+    .btn-copy:active { transform: translateY(0); }
+
+    .copy-icon {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    /* Copied toast */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--accent);
+      color: var(--bg2);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      padding: 10px 24px;
+      border-radius: 999px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(.34,1.56,.64,1), opacity 0.3s;
+      pointer-events: none;
+      z-index: 100;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Empty state hint */
+    .hint {
+      text-align: center;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      margin-top: 20px;
+    }
+
+    .hint span {
+      color: var(--accent);
+    }
+
+    /* Scanline effect on card (dark only) */
+    [data-theme="dark"] .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(255,255,255,0.008) 3px,
+        rgba(255,255,255,0.008) 4px
+      );
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="topbar">
+      <div class="logo">
+        <span class="logo-title">LOADSTRING GEN</span>
+        <span class="logo-sub">Script Builder v1.0</span>
+      </div>
+      <div class="toggle-wrap">
+        <span class="toggle-label" id="theme-label">DARK</span>
+        <label class="toggle">
+          <input type="checkbox" id="theme-toggle" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <label for="link-input">Masukan Link</label>
+    <div class="input-group">
+      <div class="input-prefix">URL</div>
+      <input type="text" id="link-input" placeholder="https://raw.githubusercontent.com/..." autocomplete="off" spellcheck="false"/>
+    </div>
+
+    <button class="btn-generate" onclick="generateScript()">
+      ⚡ Generate Script
+    </button>
+
+    <div class="output-section" id="output-section">
+      <label>Result</label>
+      <div class="output-box">
+        <div id="output-text"></div>
+      </div>
+      <button class="btn-copy" onclick="copyScript()">
+        <svg class="copy-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+        </svg>
+        Copy Script
+      </button>
+    </div>
+
+    <p class="hint">Masukkan link lalu klik <span>Generate</span> untuk membuat script</p>
+  </div>
+
+  <div class="toast" id="toast">✓ COPIED!</div>
+
+  <script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeLabel = document.getElementById('theme-label');
+    const html = document.documentElement;
+
+    themeToggle.addEventListener('change', () => {
+      if (themeToggle.checked) {
+        html.setAttribute('data-theme', 'light');
+        themeLabel.textContent = 'LIGHT';
+      } else {
+        html.setAttribute('data-theme', 'dark');
+        themeLabel.textContent = 'DARK';
+      }
+    });
+
+    let currentScript = '';
+
+    function generateScript() {
+      const link = document.getElementById('link-input').value.trim();
+      const output = document.getElementById('output-text');
+      const section = document.getElementById('output-section');
+
+      if (!link) {
+        document.getElementById('link-input').focus();
+        shakeInput();
+        return;
+      }
+
+      currentScript = `loadstring(game:HttpGet("${link}"))()`;
+      output.textContent = currentScript;
+
+      section.classList.add('visible');
+    }
+
+    function copyScript() {
+      if (!currentScript) return;
+      navigator.clipboard.writeText(currentScript).then(() => {
+        showToast();
+      }).catch(() => {
+        // Fallback
+        const el = document.createElement('textarea');
+        el.value = currentScript;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        showToast();
+      });
+    }
+
+    function showToast() {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function shakeInput() {
+      const group = document.querySelector('.input-group');
+      group.style.animation = 'none';
+      group.style.borderColor = '#ff4d4d';
+      group.style.boxShadow = '0 0 0 2px rgba(255,77,77,0.2)';
+      setTimeout(() => {
+        group.style.borderColor = '';
+        group.style.boxShadow = '';
+      }, 800);
+    }
+
+    // Enter key support
+    document.getElementById('link-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') generateScript();
+    });
+  </script>
+</body>
+</html>
